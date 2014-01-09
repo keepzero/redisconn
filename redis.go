@@ -2,17 +2,18 @@ package redisconn
 
 import (
 	"github.com/garyburd/redigo/redis"
+	"sync"
 )
 
 type R struct {
 	network string
 	address string
 	conn    redis.Conn
+
+	mu sync.Mutex
 }
 
-func (r *R) reconnect() error {
-
-	var err error
+func (r *R) reconnect() (err error) {
 
 	// reconnect if conn is nil
 	if r.conn != nil {
@@ -20,13 +21,11 @@ func (r *R) reconnect() error {
 			// close old conn
 			r.conn.Close()
 			r.conn, err = redis.Dial(r.network, r.address)
-			return err
 		}
 	} else {
 		r.conn, err = redis.Dial(r.network, r.address)
-		return err
 	}
-	return nil
+	return
 }
 
 func Open(network, address string) (*R, error) {
@@ -41,6 +40,10 @@ func Open(network, address string) (*R, error) {
 }
 
 func (r *R) Do(cmd string, args ...interface{}) (reply interface{}, err error) {
+
+	// Lock
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	// reconnect before use
 	if err = r.reconnect(); err != nil {

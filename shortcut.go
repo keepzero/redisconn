@@ -38,6 +38,8 @@ func (r *R) GetString(k string) (str string, err error) {
 
 	// switch type
 	switch strVal := rData.(type) {
+	case redis.Error:
+		return "", strVal
 	case string:
 		return strVal, nil
 	case int64:
@@ -46,10 +48,8 @@ func (r *R) GetString(k string) (str string, err error) {
 		return string(strVal), nil
 	case nil:
 		return "", nil
-	case redis.Error:
-		return "", strVal
 	default:
-		return "", errors.New("redis command return type not unknow")
+		return "", errors.New("Redis command GET return type unknow")
 	}
 }
 
@@ -70,7 +70,7 @@ func (r *R) GetInt64List(k string, start int, stop int) ([]int64, error) {
 			ret = append(ret, i)
 		}
 	} else {
-		return ret, errors.New("redis command return type unknow")
+		return ret, errors.New("Redis command LRANGE return type not []interface{}")
 	}
 
 	return ret, nil
@@ -91,10 +91,27 @@ func (r *R) GetIntList(k string, start int, stop int) ([]int, error) {
 	return ret, nil
 }
 
+func (r *R) GetInt32List(k string, start int, stop int) ([]int32, error) {
+
+	ret := []int32{}
+	retInt64, err := r.GetInt64List(k, start, stop)
+	if err != nil {
+		return ret, err
+	}
+
+	for _, i := range retInt64 {
+		ret = append(ret, int32(i))
+	}
+
+	return ret, nil
+}
+
 func convertToInt64(val interface{}) (int64, error) {
 
 	// switch type
 	switch intVal := val.(type) {
+	case redis.Error:
+		return 0, intVal
 	case int64:
 		return intVal, nil
 	case string:
@@ -103,9 +120,9 @@ func convertToInt64(val interface{}) (int64, error) {
 		return strconv.ParseInt(fmt.Sprintf("%s", string(intVal)), 10, 64)
 	case nil:
 		return 0, nil
-	case redis.Error:
-		return 0, intVal
+	case []interface{}:
+		return 0, errors.New("Cant't convert []interface{} to int64")
 	default:
-		return 0, errors.New("redis command return type unknow")
+		return 0, errors.New("Redis return type unknow")
 	}
 }
