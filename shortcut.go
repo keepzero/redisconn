@@ -106,6 +106,21 @@ func (r *R) GetInt32List(k string, start int, stop int) ([]int32, error) {
 	return ret, nil
 }
 
+// Do with int value returned
+// example: DoInt("INCR", "key")
+func (r *R) DoInt(cmd string, args ...interface{}) (int, error) {
+	//return 0, nil
+	rData, err := r.Do(cmd, args...)
+	if err != nil || rData == nil {
+		return 0, err
+	}
+	ret, err := convertToInt64(rData)
+	return int(ret), err
+}
+
+// TODO
+// DoString
+
 func convertToInt64(val interface{}) (int64, error) {
 
 	// switch type
